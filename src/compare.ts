@@ -11,6 +11,8 @@ const REPORT_OUT = "output/comparison-report.json";
 
 const FLOAT_TOL = 0.001;
 
+/** Optional follow-up: reduce camelCase vs snake_case noise — see docs/followup-key-aliasing.md */
+
 type Category = "metadata" | "deviceInfo" | "session" | "laps" | "records";
 
 function loadNormalized(path: string): Promise<NormalizedFitData> {

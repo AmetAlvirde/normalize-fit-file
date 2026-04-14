@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@garmin/fitsdk": "^21.158.0",
-    "fit-file-parser": "^1.21.0"
+    "fit-file-parser": "^2.3.3"
   },
   "devDependencies": {
     "@types/bun": "latest",
