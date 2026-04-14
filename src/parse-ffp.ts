@@ -7,34 +7,37 @@ import {
   writeOutput,
 } from "./normalize";
 
+/** Parsed FIT root shape returned by `fit-file-parser` v2 `parseAsync`. */
+export type FfpParsedFit = Awaited<
+  ReturnType<InstanceType<typeof FitParser>["parseAsync"]>
+>;
+
 const DEFAULT_FIT = "fits/build-26.fit";
 const OUT_RAW = "output/fit-file-parser-raw.json";
 const OUT_NORM = "output/fit-file-parser-normalized.json";
 
-function firstRecord(obj: unknown): Record<string, unknown> | undefined {
-  if (obj == null) return undefined;
-  if (typeof obj === "object" && !Array.isArray(obj)) {
-    return obj as Record<string, unknown>;
-  }
-  return undefined;
+function asHybridRecord(
+  obj: Record<string, unknown> | undefined
+): Record<string, unknown> {
+  if (!obj) return {};
+  return objectToHybrid(obj);
 }
 
-function asObjectArray(v: unknown): Record<string, unknown>[] {
+function asObjectArray(
+  v: unknown
+): Record<string, unknown>[] {
   if (!Array.isArray(v)) return [];
-  return v.filter((x): x is Record<string, unknown> => x != null && typeof x === "object");
+  return v.filter(
+    (x): x is Record<string, unknown> => x != null && typeof x === "object"
+  );
 }
 
-export function normalizeFFP(rawData: unknown): NormalizedFitData {
-  const root = firstRecord(rawData);
-  if (!root) {
-    return {
-      metadata: {},
-      deviceInfo: [],
-      session: {},
-      laps: [],
-      records: [],
-    };
-  }
+/**
+ * Normalize fit-file-parser output into the shared schema.
+ * Accepts the parser result; uses `Partial` at the boundary because some FIT files omit sections.
+ */
+export function normalizeFFP(rawData: Partial<FfpParsedFit>): NormalizedFitData {
+  const root = rawData as unknown as Record<string, unknown>;
 
   const sessions = asObjectArray(root.sessions);
   const laps = asObjectArray(root.laps);
@@ -48,8 +51,8 @@ export function normalizeFFP(rawData: unknown): NormalizedFitData {
   const sport0 = sports[0];
 
   const metadata = {
-    ...objectToHybrid(file0),
-    ...objectToHybrid(sport0),
+    ...asHybridRecord(file0),
+    ...asHybridRecord(sport0),
     sport: session0?.sport ?? sport0?.sport,
     subSport: session0?.sub_sport ?? sport0?.sub_sport,
     name: session0?.name ?? root.name,
@@ -101,17 +104,9 @@ export function normalizeFFP(rawData: unknown): NormalizedFitData {
   };
 }
 
-function parseFitBuffer(buffer: ArrayBuffer): Promise<Record<string, unknown>> {
-  return new Promise((resolve, reject) => {
-    const parser = new FitParser({ mode: "list", force: true });
-    parser.parse(buffer, (err, data) => {
-      if (err) {
-        reject(new Error(`fit-file-parser: ${err}`));
-        return;
-      }
-      resolve(data);
-    });
-  });
+async function parseFitBuffer(buffer: ArrayBuffer): Promise<FfpParsedFit> {
+  const parser = new FitParser({ mode: "list", force: true });
+  return parser.parseAsync(buffer);
 }
 
 async function main() {
