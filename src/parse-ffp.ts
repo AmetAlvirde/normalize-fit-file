@@ -1,4 +1,5 @@
 import FitParser from "fit-file-parser";
+import { renameRowArray, renameRowKeys } from "./ffp-garmin-field-names";
 import {
   type NormalizedFitData,
   downsampleRecords,
@@ -39,12 +40,12 @@ function asObjectArray(
 export function normalizeFFP(rawData: Partial<FfpParsedFit>): NormalizedFitData {
   const root = rawData as unknown as Record<string, unknown>;
 
-  const sessions = asObjectArray(root.sessions);
-  const laps = asObjectArray(root.laps);
-  const records = asObjectArray(root.records);
-  const fileIds = asObjectArray(root.file_ids);
-  const devices = asObjectArray(root.device_infos);
-  const sports = asObjectArray(root.sports);
+  const sessions = renameRowArray(asObjectArray(root.sessions));
+  const laps = renameRowArray(asObjectArray(root.laps));
+  const records = renameRowArray(asObjectArray(root.records));
+  const fileIds = renameRowArray(asObjectArray(root.file_ids));
+  const devices = renameRowArray(asObjectArray(root.device_infos));
+  const sports = renameRowArray(asObjectArray(root.sports));
 
   const session0 = sessions[0];
   const file0 = fileIds[0];
@@ -54,21 +55,21 @@ export function normalizeFFP(rawData: Partial<FfpParsedFit>): NormalizedFitData 
     ...asHybridRecord(file0),
     ...asHybridRecord(sport0),
     sport: session0?.sport ?? sport0?.sport,
-    subSport: session0?.sub_sport ?? sport0?.sub_sport,
+    subSport: session0?.subSport ?? sport0?.subSport,
     name: session0?.name ?? root.name,
-    timestamp: session0?.timestamp ?? file0?.time_created,
-    totalTimerTime: session0?.total_timer_time,
-    startTime: session0?.start_time,
+    timestamp: session0?.timestamp ?? file0?.timeCreated,
+    totalTimerTime: session0?.totalTimerTime,
+    startTime: session0?.startTime,
   } as NormalizedFitData["metadata"];
 
   const deviceInfo: NormalizedFitData["deviceInfo"] = [
     ...fileIds.map((d, i) => ({
-      _source: "file_id",
+      _source: "fileId",
       _index: i,
       ...objectToHybrid(d),
     })),
     ...devices.map((d, i) => ({
-      _source: "device_info",
+      _source: "deviceInfo",
       _index: i,
       ...objectToHybrid(d),
     })),
@@ -78,7 +79,9 @@ export function normalizeFFP(rawData: Partial<FfpParsedFit>): NormalizedFitData 
     deviceInfo.push({
       _source: "software",
       _index: 0,
-      ...objectToHybrid(root.software as Record<string, unknown>),
+      ...objectToHybrid(
+        renameRowKeys(root.software as Record<string, unknown>)
+      ),
     });
   }
 
@@ -87,8 +90,8 @@ export function normalizeFFP(rawData: Partial<FfpParsedFit>): NormalizedFitData 
     : {};
 
   const lapsNorm: NormalizedFitData["laps"] = laps.map((lap, i) => ({
-    lapIndex: typeof lap.lap_index === "number" ? lap.lap_index : i,
     ...objectToHybrid(lap),
+    lapIndex: typeof lap.lapIndex === "number" ? lap.lapIndex : i,
   }));
 
   const recordsNorm: NormalizedFitData["records"] = records.map((r) =>
