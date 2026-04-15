@@ -1,4 +1,4 @@
-# DotFit — developer onboarding
+# DotFit
 
 DotFit turns **Garmin FIT** (`.fit`) binaries into **JSON**: a raw parse plus
 a **normalized** shape with Garmin-style field names, optional Stryd label
@@ -17,13 +17,14 @@ bun install
 ## Parse your own FIT file (recommended path)
 
 The default pipeline uses **fit-file-parser** plus normalization
-(`normalizeFFP` in [`src/parse-ffp.ts`](../src/parse-ffp.ts); also exported from the package root as `dotfit` after `pnpm build`):
+(`normalizeFFP` in [`src/parse-ffp.ts`](../src/parse-ffp.ts); also exported
+from the package root as `dotfit` after `pnpm build`):
 
 ```bash
 bun run parse:ffp -- path/to/your/activity.fit
 ```
 
-You must pass a path to a `.fit` file; running the command with no file exits with an error. The **git repository** includes **`fits/build-26.fit`** as a sample for local testing and maintainer workflows; pass that path explicitly, or run **`bun run parse:ffp:sample`** (Garmin: **`parse:garmin:sample`**). The published npm package only ships **`dist/`**, so the sample is not present after `npm install dotfit`—bring your own `.fit` or clone the repo to use it.
+You must pass a path to a `.fit` file; running the command with no file exits with an error. The **git repository** includes **`fits/build-26.fit`** as a sample for local testing and maintainer workflows; pass that path explicitly, or run **`bun run parse:ffp:sample`** (same idea for Garmin: **`parse:garmin:sample`**). The published npm package only contains **`dist/`**, so that sample file is not installed with `npm install dotfit`—use your own `.fit` or clone the repo if you want the sample.
 
 **Outputs** (written under `output/`):
 
@@ -48,7 +49,7 @@ For a second opinion or diffing against the official decoder:
 bun run parse:garmin -- path/to/your/activity.fit
 ```
 
-A `.fit` path is required (same as `parse:ffp`). Use **`bun run parse:garmin:sample`** for `fits/build-26.fit`.
+A `.fit` path is required (same behavior as `parse:ffp`). Use **`bun run parse:garmin:sample`** to run against `fits/build-26.fit`.
 
 Outputs: `output/garmin-sdk-raw.json` and `output/garmin-sdk-normalized.json`.
 
@@ -69,7 +70,11 @@ for how naming relates to comparisons.
 2. Import from the package entry point:
 
    ```ts
-   import { normalizeFFP, parseFitBuffer, type NormalizedFitData } from "dotfit";
+   import {
+     normalizeFFP,
+     parseFitBuffer,
+     type NormalizedFitData,
+   } from "dotfit";
    ```
 
 3. Read the `.fit` file into an `ArrayBuffer`, parse with **`parseFitBuffer`** (or
@@ -90,7 +95,7 @@ Field naming pipeline:
 | Command                    | Purpose                                                                 |
 | -------------------------- | ----------------------------------------------------------------------- |
 | `bun run parse:ffp -- <file.fit>` | Parse FIT → raw + normalized JSON (recommended); **`<file.fit>` required**. |
-| `bun run parse:ffp:sample` | Same using the repo sample `fits/build-26.fit`.                       |
+| `bun run parse:ffp:sample` | Same as above using the repo sample `fits/build-26.fit`.               |
 | `bun run parse:garmin -- <file.fit>` | Parse FIT with `@garmin/fitsdk` → raw + normalized JSON; **path required**. |
 | `bun run parse:garmin:sample` | Same using `fits/build-26.fit`.                                   |
 | `bun run compare`      | Compare the two normalized outputs (expects existing `output/*` files). |

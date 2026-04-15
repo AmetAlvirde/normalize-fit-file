@@ -50,7 +50,7 @@ if you need map-only behavior.
 ## Maintenance (Stryd firmware / app updates)
 
 1. Export a FIT from a known activity after a Stryd firmware or ecosystem change.
-2. Run `bun run parse:ffp` and inspect `output/fit-file-parser-normalized.json`
+2. Run `bun run parse:ffp -- fits/build-26.fit` (or `bun run parse:ffp:sample`) and inspect `output/fit-file-parser-normalized.json`
    (or raw output) for **new** display-string keys on session/lap/record rows.
 3. Add entries to `STRYD_LABEL_TO_CAMEL` (use `stryd*` or another clear prefix
    when a label could collide with a standard FIT field).
