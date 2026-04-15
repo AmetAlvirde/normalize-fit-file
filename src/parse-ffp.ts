@@ -1,5 +1,6 @@
 import FitParser from "fit-file-parser";
 import { renameRowArray, renameRowKeys } from "./ffp-garmin-field-names";
+import { renameStrydRowArray, renameStrydRowKeys } from "./ffp-stryd-second-pass";
 import {
   type NormalizedFitData,
   downsampleRecords,
@@ -40,12 +41,22 @@ function asObjectArray(
 export function normalizeFFP(rawData: Partial<FfpParsedFit>): NormalizedFitData {
   const root = rawData as unknown as Record<string, unknown>;
 
-  const sessions = renameRowArray(asObjectArray(root.sessions));
-  const laps = renameRowArray(asObjectArray(root.laps));
-  const records = renameRowArray(asObjectArray(root.records));
-  const fileIds = renameRowArray(asObjectArray(root.file_ids));
-  const devices = renameRowArray(asObjectArray(root.device_infos));
-  const sports = renameRowArray(asObjectArray(root.sports));
+  const sessions = renameStrydRowArray(
+    renameRowArray(asObjectArray(root.sessions))
+  );
+  const laps = renameStrydRowArray(renameRowArray(asObjectArray(root.laps)));
+  const records = renameStrydRowArray(
+    renameRowArray(asObjectArray(root.records))
+  );
+  const fileIds = renameStrydRowArray(
+    renameRowArray(asObjectArray(root.file_ids))
+  );
+  const devices = renameStrydRowArray(
+    renameRowArray(asObjectArray(root.device_infos))
+  );
+  const sports = renameStrydRowArray(
+    renameRowArray(asObjectArray(root.sports))
+  );
 
   const session0 = sessions[0];
   const file0 = fileIds[0];
@@ -80,7 +91,9 @@ export function normalizeFFP(rawData: Partial<FfpParsedFit>): NormalizedFitData 
       _source: "software",
       _index: 0,
       ...objectToHybrid(
-        renameRowKeys(root.software as Record<string, unknown>)
+        renameStrydRowKeys(
+          renameRowKeys(root.software as Record<string, unknown>)
+        )
       ),
     });
   }
