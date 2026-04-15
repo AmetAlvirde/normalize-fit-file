@@ -1,4 +1,4 @@
-import { mkdir } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
 /** Workout / file-level metadata (sport, timestamps, naming). */
@@ -110,7 +110,7 @@ export async function writeOutput(
 ): Promise<void> {
   await mkdir(dirname(filePath), { recursive: true });
   const text = JSON.stringify(data, jsonReplacer, 2);
-  await Bun.write(filePath, text);
+  await writeFile(filePath, text, "utf-8");
 }
 
 /** Shallow clone object fields into a hybrid map (drops non-enumerable). */

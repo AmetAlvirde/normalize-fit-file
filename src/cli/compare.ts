@@ -3,7 +3,7 @@ import {
   type NormalizedFitData,
   type RecordData,
   writeOutput,
-} from "./normalize";
+} from "../normalize";
 
 const GARMIN_NORM = "output/garmin-sdk-normalized.json";
 const FFP_NORM = "output/fit-file-parser-normalized.json";

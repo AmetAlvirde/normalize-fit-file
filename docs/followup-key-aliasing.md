@@ -13,7 +13,7 @@ same field under snake_case vs camelCase.
 
 ## Optional: compare-time aliasing
 
-You can still teach [`compare.ts`](../src/compare.ts) to normalize keys before
+You can still teach [`compare.ts`](../src/cli/compare.ts) to normalize keys before
 `fieldCoverage` / `valueAgreement` if you need to diff **older** saved JSON
 that predates the mapper. For current pipelines, this is unnecessary.
 

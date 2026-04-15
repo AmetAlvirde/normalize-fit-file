@@ -17,7 +17,7 @@ bun install
 ## Parse your own FIT file (recommended path)
 
 The default pipeline uses **fit-file-parser** plus normalization
-(`normalizeFFP` in [`src/parse-ffp.ts`](../src/parse-ffp.ts)):
+(`normalizeFFP` in [`src/parse-ffp.ts`](../src/parse-ffp.ts); also exported from the package root as `dotfit` after `pnpm build`):
 
 ```bash
 bun run parse:ffp -- path/to/your/activity.fit
@@ -60,15 +60,21 @@ This writes `output/comparison-report.json` (field coverage and value checks
 between the two parsers). See [followup-key-aliasing.md](followup-key-aliasing.md)
 for how naming relates to comparisons.
 
-## Use as a library (TypeScript)
+## Use as a library (TypeScript / Node.js or Bun)
 
-1. Copy or depend on this package and import **`normalizeFFP`**
-   from [`src/parse-ffp.ts`](../src/parse-ffp.ts) (or expose it via your own entry point).
-2. Read the `.fit` file into an `ArrayBuffer`, call
-   `FitParser`’s `parseAsync` (same options as in `parseFitBuffer`), then pass
-   the result to **`normalizeFFP(raw)`**.
-3. Types: **`NormalizedFitData`** and related types live
-   in [`src/normalize.ts`](../src/normalize.ts).
+1. Install **`dotfit`** and the parser(s) you need as peer dependencies, e.g.
+   `pnpm add dotfit fit-file-parser` (and/or `@garmin/fitsdk` for `normalizeGarmin`).
+2. Import from the package entry point:
+
+   ```ts
+   import { normalizeFFP, parseFitBuffer, type NormalizedFitData } from "dotfit";
+   ```
+
+3. Read the `.fit` file into an `ArrayBuffer`, parse with **`parseFitBuffer`** (or
+   `FitParser`’s `parseAsync` with the same options), then pass the result to
+   **`normalizeFFP(raw)`**.
+4. Types such as **`NormalizedFitData`** are exported from **`dotfit`** (see
+   [`src/index.ts`](../src/index.ts)).
 
 Field naming pipeline:
 
@@ -85,7 +91,8 @@ Field naming pipeline:
 | `bun run parse:garmin` | Parse FIT with `@garmin/fitsdk` → raw + normalized JSON.                |
 | `bun run compare`      | Compare the two normalized outputs (expects existing `output/*` files). |
 | `bun test`             | Unit tests.                                                             |
-| `bun run typecheck`    | `tsc --noEmit`.                                                         |
+| `pnpm run typecheck`   | `tsc --noEmit`.                                                         |
+| `pnpm run build`       | Build publishable `dist/` (ESM + CJS + types) with tsup.                |
 
 ## Further reading
 
