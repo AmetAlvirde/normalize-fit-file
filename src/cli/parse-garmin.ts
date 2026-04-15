@@ -6,8 +6,8 @@ import {
   writeOutput,
 } from "../normalize";
 import { normalizeGarmin } from "../parse-garmin";
+import { parseFitPath } from "./fit-path";
 
-const DEFAULT_FIT = "fits/build-26.fit";
 const OUT_RAW = "output/garmin-sdk-raw.json";
 const OUT_NORM = "output/garmin-sdk-normalized.json";
 
@@ -20,7 +20,19 @@ function bufferToArrayBuffer(buf: Buffer): ArrayBuffer {
 
 async function main() {
   const argv = process.argv.slice(2);
-  const fitPath = argv[0] && !argv[0].startsWith("-") ? argv[0] : DEFAULT_FIT;
+  const fitPath = parseFitPath(argv);
+  if (fitPath == null) {
+    console.error("Error: no .fit file path provided.");
+    console.error("");
+    console.error("Usage: bun run parse:garmin -- <file.fit> [--sample N]");
+    console.error(
+      "Example: bun run parse:garmin -- path/to/activity.fit --sample 10"
+    );
+    console.error(
+      "This repo ships fits/build-26.fit for local testing; pass that path if you want to use it."
+    );
+    process.exit(1);
+  }
   const sampleN = parseSampleArg(argv);
 
   const nodeBuf = await readFile(fitPath);
