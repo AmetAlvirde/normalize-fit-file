@@ -1,7 +1,7 @@
 {
   "name": "dotfit",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.5",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -21,14 +21,20 @@
   "files": [
     "dist"
   ],
+  "bin": {
+    "dotfit": "./dist/dotfit.cjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "build": "tsup",
     "prepublishOnly": "npm run build",
-    "parse:garmin": "bun run src/cli/parse-garmin.ts",
-    "parse:garmin:sample": "bun run src/cli/parse-garmin.ts fits/build-26.fit",
-    "parse:ffp": "bun run src/cli/parse-ffp.ts",
-    "parse:ffp:sample": "bun run src/cli/parse-ffp.ts fits/build-26.fit",
-    "compare": "bun run src/cli/compare.ts",
+    "parse:garmin": "bun run src/cli/dotfit.ts parse-garmin",
+    "parse:garmin:sample": "bun run src/cli/dotfit.ts parse-garmin fits/build-26.fit",
+    "parse:ffp": "bun run src/cli/dotfit.ts parse-ffp",
+    "parse:ffp:sample": "bun run src/cli/dotfit.ts parse-ffp fits/build-26.fit",
+    "compare": "bun run src/cli/dotfit.ts compare",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
   },

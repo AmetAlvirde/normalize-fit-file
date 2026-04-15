@@ -1,28 +1,35 @@
 # Key naming: FFP vs Garmin
 
-## Primary layer (implemented)
+## Primary layers (implemented)
 
-Standard FIT fields from **fit-file-parser** are renamed to **Garmin SDK-style**
-camelCase in [`src/ffp-garmin-field-names.ts`](../src/ffp-garmin-field-names.ts),
-applied inside [`normalizeFFP`](../src/parse-ffp.ts) for sessions, laps,
-records, file IDs, device infos, sports, and software rows.
+**Pass 1 — standard FIT fields:** fit-file-parser’s snake_case keys are renamed to
+**Garmin SDK–style camelCase** in
+[`src/ffp-garmin-field-names.ts`](../src/ffp-garmin-field-names.ts), applied inside
+[`normalizeFFP`](../src/parse-ffp.ts) for sessions, laps, records, file IDs,
+device infos, sports, and software rows.
 
-New normalized output should already align keys with
+**Pass 2 — Stryd / vendor display labels:** Human-readable keys such as
+`"Air Power"` and `"Run Profile"` are converted to **stable camelCase** in
+[`src/ffp-stryd-second-pass.ts`](../src/ffp-stryd-second-pass.ts) (explicit map
+`STRYD_LABEL_TO_CAMEL`, optional multi-word fallback; see
+[stryd-fit-fields.md](stryd-fit-fields.md)). Pass 2 runs **after** pass 1 on the
+same row arrays.
+
+Together, normalized FFP output should align with
 [`normalizeGarmin`](../src/parse-garmin.ts) wherever both parsers expose the
-same field under snake_case vs camelCase.
+same conceptual field (allowing for remaining semantic/value differences).
 
 ## Optional: compare-time aliasing
 
 You can still teach [`compare.ts`](../src/cli/compare.ts) to normalize keys before
 `fieldCoverage` / `valueAgreement` if you need to diff **older** saved JSON
-that predates the mapper. For current pipelines, this is unnecessary.
+that predates these mappers. For current pipelines, this is unnecessary.
 
-## Developer / vendor fields (optional follow-up)
+## Garmin `developerFields` shape (future / stronger parity)
 
-**Current choice (minimal):** Keys that are not plain snake_case FIT
-tokens—e.g. human-readable vendor labels (`"Air Power"`, `"Run Profile"`)—are
-left as fit-file-parser exposes them. They do not automatically match Garmin’s
-`developerFields` structure.
+**Current behavior:** Rows stay **flat** key/value objects with camelCase names.
+Vendor metrics are **not** reorganized into the same nested structure as the
+Garmin SDK’s `developerFields` (that would be device- and profile-specific).
 
 **Stronger parity (future):** Pack those fields into the same shape as the
 Garmin SDK’s `developerFields` using fixture-driven mappings

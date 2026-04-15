@@ -1,12 +1,15 @@
 # DotFit — developer onboarding
 
 DotFit turns **Garmin FIT** (`.fit`) binaries into **JSON**: a raw parse plus
-a **normalized** shape with Garmin-style field names, optional Stryd label
-normalization, and shared metadata/session/lap/record sections.
+a **normalized** shape with Garmin-style field names, **Stryd/vendor display
+labels mapped to camelCase** (fit-file-parser path), and shared
+metadata/session/lap/record sections.
 
 ## Prerequisites
 
-- **[Bun](https://bun.sh)** (the CLI scripts use `bun run`).
+- **Node.js 18+** for the published **`dotfit`** CLI and library.
+- **[Bun](https://bun.sh)** (optional): this repo’s npm scripts use `bun run`
+  to execute [`src/cli/dotfit.ts`](../src/cli/dotfit.ts) without compiling first.
 
 From the repo root:
 
@@ -14,16 +17,45 @@ From the repo root:
 bun install
 ```
 
+## CLI (`dotfit` command)
+
+Consumers install **`dotfit`** and peer parser(s), then:
+
+```bash
+npx dotfit parse-ffp path/to/your/activity.fit
+npx dotfit parse-garmin path/to/your/activity.fit
+npx dotfit compare
+```
+
+- **`parse-ffp`** needs **`fit-file-parser`** installed.
+- **`parse-garmin`** needs **`@garmin/fitsdk`**.
+- **`compare`** expects prior outputs under `output/` from both parsers.
+
+`npx dotfit help` prints usage. **Bun:** `bunx dotfit …` runs the same binary.
+
 ## Parse your own FIT file (recommended path)
 
 The default pipeline uses **fit-file-parser** plus normalization
 (`normalizeFFP` in [`src/parse-ffp.ts`](../src/parse-ffp.ts); also exported from the package root as `dotfit` after `pnpm build`):
 
+**Published package:**
+
+```bash
+npx dotfit parse-ffp path/to/your/activity.fit
+```
+
+**This repository:**
+
 ```bash
 bun run parse:ffp -- path/to/your/activity.fit
 ```
 
-You must pass a path to a `.fit` file; running the command with no file exits with an error. The **git repository** includes **`fits/build-26.fit`** as a sample for local testing and maintainer workflows; pass that path explicitly, or run **`bun run parse:ffp:sample`** (Garmin: **`parse:garmin:sample`**). The published npm package only ships **`dist/`**, so the sample is not present after `npm install dotfit`—bring your own `.fit` or clone the repo to use it.
+You must pass a path to a `.fit` file; running the command with no file exits
+with an error. The **git repository** includes **`fits/build-26.fit`** as a
+sample for local testing and maintainer workflows; pass that path explicitly, or
+run **`bun run parse:ffp:sample`** (Garmin: **`parse:garmin:sample`**). The
+published npm package only ships **`dist/`**, so the sample is not present
+after `npm install dotfit`—bring your own `.fit` or clone the repo to use it.
 
 **Outputs** (written under `output/`):
 
@@ -35,6 +67,7 @@ You must pass a path to a `.fit` file; running the command with no file exits wi
 **Large files:** downsample record rows for smaller JSON while debugging:
 
 ```bash
+npx dotfit parse-ffp path/to/activity.fit --sample 10
 bun run parse:ffp -- path/to/activity.fit --sample 10
 ```
 
@@ -45,6 +78,7 @@ That keeps every 10th record (see `parseSampleArg` in [`src/normalize.ts`](../sr
 For a second opinion or diffing against the official decoder:
 
 ```bash
+npx dotfit parse-garmin path/to/your/activity.fit
 bun run parse:garmin -- path/to/your/activity.fit
 ```
 
@@ -55,6 +89,7 @@ Outputs: `output/garmin-sdk-raw.json` and `output/garmin-sdk-normalized.json`.
 After generating both normalized files, you can run:
 
 ```bash
+npx dotfit compare
 bun run compare
 ```
 
@@ -69,7 +104,11 @@ for how naming relates to comparisons.
 2. Import from the package entry point:
 
    ```ts
-   import { normalizeFFP, parseFitBuffer, type NormalizedFitData } from "dotfit";
+   import {
+     normalizeFFP,
+     parseFitBuffer,
+     type NormalizedFitData,
+   } from "dotfit";
    ```
 
 3. Read the `.fit` file into an `ArrayBuffer`, parse with **`parseFitBuffer`** (or
@@ -87,16 +126,19 @@ Field naming pipeline:
 
 ## Scripts (summary)
 
-| Command                    | Purpose                                                                 |
-| -------------------------- | ----------------------------------------------------------------------- |
-| `bun run parse:ffp -- <file.fit>` | Parse FIT → raw + normalized JSON (recommended); **`<file.fit>` required**. |
-| `bun run parse:ffp:sample` | Same using the repo sample `fits/build-26.fit`.                       |
-| `bun run parse:garmin -- <file.fit>` | Parse FIT with `@garmin/fitsdk` → raw + normalized JSON; **path required**. |
-| `bun run parse:garmin:sample` | Same using `fits/build-26.fit`.                                   |
-| `bun run compare`      | Compare the two normalized outputs (expects existing `output/*` files). |
-| `bun test`             | Unit tests.                                                             |
-| `pnpm run typecheck`   | `tsc --noEmit`.                                                         |
-| `pnpm run build`       | Build publishable `dist/` (ESM + CJS + types) with tsup.                |
+| Command                              | Purpose                                            |
+| ------------------------------------ | -------------------------------------------------- |
+| `npx dotfit parse-ffp <file.fit>`    | Published CLI; **path required**.                  |
+| `npx dotfit parse-garmin <file.fit>` | Published CLI; **path required**.                  |
+| `npx dotfit compare`                 | Published CLI; expects `output/*` normalized JSON. |
+| `bun run parse:ffp -- <file.fit>`    | Repo dev (Bun + `dotfit.ts`).                      |
+| `bun run parse:ffp:sample`           | Repo: `fits/build-26.fit`.                         |
+| `bun run parse:garmin -- <file.fit>` | Repo dev.                                          |
+| `bun run parse:garmin:sample`        | Repo: sample FIT.                                  |
+| `bun run compare`                    | Repo dev.                                          |
+| `bun test`                           | Unit tests.                                        |
+| `pnpm run typecheck`                 | `tsc --noEmit`.                                    |
+| `pnpm run build`                     | `dist/` library + `dotfit.cjs` CLI.                |
 
 ## Further reading
 
