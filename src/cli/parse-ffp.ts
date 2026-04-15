@@ -17,15 +17,14 @@ function bufferToArrayBuffer(buf: Buffer): ArrayBuffer {
   ) as ArrayBuffer;
 }
 
-async function main() {
-  const argv = process.argv.slice(2);
+export async function runParseFfpCli(argv: string[]): Promise<void> {
   const fitPath = parseFitPath(argv);
   if (fitPath == null) {
     console.error("Error: no .fit file path provided.");
     console.error("");
-    console.error("Usage: bun run parse:ffp -- <file.fit> [--sample N]");
+    console.error("Usage: dotfit parse-ffp <file.fit> [--sample N]");
     console.error(
-      "Example: bun run parse:ffp -- path/to/activity.fit --sample 10"
+      "Example: dotfit parse-ffp path/to/activity.fit --sample 10"
     );
     console.error(
       "This repo ships fits/build-26.fit for local testing; pass that path if you want to use it."
@@ -63,8 +62,3 @@ async function main() {
     `  Field counts — metadata: ${keys(normalized.metadata)}, session: ${keys(normalized.session)}`
   );
 }
-
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
