@@ -55,13 +55,9 @@ bun run parse:ffp -- path/to/your/activity.fit
 ```
 
 You must pass a path to a `.fit` file; running with no file exits with an error.
-The **git repository** includes **`fits/build-26.fit`** as a sample for local
-testing and maintainer workflows; pass that path explicitly, or run
-**`bun run parse:ffp:sample`** (Garmin: **`parse:garmin:sample`**).
+Keep personal activity files out of git (see `.gitignore`: e.g. `sample-fits/`, `fits/*.fit`).
 
-The published npm package only contains **`dist/`**, so that sample file is
-not installed with `npm install normalize-fit-file`—use your own `.fit` or clone the
-repo if you want the sample.
+The published npm package only contains **`dist/`**—use your own `.fit` paths when running the CLI.
 
 **Outputs** (written under `output/`):
 
@@ -90,7 +86,7 @@ npx normalize-fit-file parse-garmin path/to/your/activity.fit
 bun run parse:garmin -- path/to/your/activity.fit
 ```
 
-A `.fit` path is required (same behavior as `parse-ffp`). Use **`bun run parse:garmin:sample`** in the repo to run against `fits/build-26.fit`.
+A `.fit` path is required (same behavior as `parse-ffp`).
 
 Outputs: `output/garmin-sdk-raw.json` and `output/garmin-sdk-normalized.json`.
 
@@ -141,11 +137,9 @@ Field naming pipeline:
 | `npx normalize-fit-file parse-garmin <file.fit>` | Published CLI: Garmin SDK parse (**path required**).                  |
 | `npx normalize-fit-file compare`                 | Published CLI: compare normalized outputs in `output/`.               |
 | `bun run parse:ffp -- <file.fit>`    | Repo dev: same via Bun + `src/cli/normalize-fit-file.ts`.                         |
-| `bun run parse:ffp:sample`           | Repo: sample `fits/build-26.fit`.                                     |
 | `bun run parse:garmin -- <file.fit>` | Repo dev: Garmin path.                                                |
-| `bun run parse:garmin:sample`        | Repo: sample FIT.                                                     |
 | `bun run compare`                    | Repo dev: compare.                                                    |
-| `bun test`                           | Unit tests.                                                           |
+| `bun test`                           | Unit tests. Optional smoke: set `FIT_SMOKE_FIXTURE` to a local `.fit` (gitignored). |
 | `pnpm run typecheck`                 | `tsc --noEmit`.                                                       |
 | `pnpm run build`                     | Build `dist/` (library + `normalize-fit-file` CLI).                               |
 

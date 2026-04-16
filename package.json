@@ -1,5 +1,6 @@
 {
   "name": "normalize-fit-file",
+  "private": true,
   "version": "0.1.5",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -30,9 +31,7 @@
     "build": "tsup",
     "prepublishOnly": "npm run build",
     "parse:garmin": "bun run src/cli/normalize-fit-file.ts parse-garmin",
-    "parse:garmin:sample": "bun run src/cli/normalize-fit-file.ts parse-garmin fits/build-26.fit",
     "parse:ffp": "bun run src/cli/normalize-fit-file.ts parse-ffp",
-    "parse:ffp:sample": "bun run src/cli/normalize-fit-file.ts parse-ffp fits/build-26.fit",
     "compare": "bun run src/cli/normalize-fit-file.ts compare",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
