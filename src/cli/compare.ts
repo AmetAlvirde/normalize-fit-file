@@ -487,5 +487,3 @@ function fieldPresenceRates(
   }
   return out;
 }
-
-// Extend Set prototype for union - actually I used metaG.union which doesn't exist on Set in JS

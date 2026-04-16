@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { Decoder, Stream } from "@garmin/fitsdk";
+import { bufferToArrayBuffer } from "../buffer";
 import {
   downsampleRecords,
   parseSampleArg,
@@ -10,13 +11,6 @@ import { parseFitPath } from "./fit-path";
 
 const OUT_RAW = "output/garmin-sdk-raw.json";
 const OUT_NORM = "output/garmin-sdk-normalized.json";
-
-function bufferToArrayBuffer(buf: Buffer): ArrayBuffer {
-  return buf.buffer.slice(
-    buf.byteOffset,
-    buf.byteOffset + buf.byteLength
-  ) as ArrayBuffer;
-}
 
 export async function runParseGarminCli(argv: string[]): Promise<void> {
   const fitPath = parseFitPath(argv);
