@@ -2,3 +2,7 @@ node_modules/
 output/
 dist/
 .DS_Store
+
+# Local FIT fixtures (never commit personal activity files)
+sample-fits/
+fits/*.fit

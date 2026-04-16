@@ -50,17 +50,13 @@ if you need map-only behavior.
 ## Maintenance (Stryd firmware / app updates)
 
 1. Export a FIT from a known activity after a Stryd firmware or ecosystem change.
-2. Run `npx normalize-fit-file parse-ffp fits/build-26.fit` (after build/install), or in this repo `bun run parse:ffp:sample`, and inspect `output/fit-file-parser-normalized.json`
+2. Run `npx normalize-fit-file parse-ffp path/to/your/export.fit` (after build/install), or in this repo `bun run parse:ffp -- path/to/your/export.fit`, and inspect `output/fit-file-parser-normalized.json`
    (or raw output) for **new** display-string keys on session/lap/record rows.
 3. Add entries to `STRYD_LABEL_TO_CAMEL` (use `stryd*` or another clear prefix
    when a label could collide with a standard FIT field).
 4. Extend [`src/ffp-stryd-second-pass.test.ts`](../src/ffp-stryd-second-pass.test.ts)
    if you want regression coverage for new labels.
 5. Update this table to match the map.
-
-### Stryd firmware versions support:
-
-The sample fit file was produced by stryd firmware `v2.1.32.1.1`
 
 ## Related
 

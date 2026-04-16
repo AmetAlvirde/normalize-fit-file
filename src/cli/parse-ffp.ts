@@ -20,9 +20,6 @@ export async function runParseFfpCli(argv: string[]): Promise<void> {
     console.error(
       "Example: normalize-fit-file parse-ffp path/to/activity.fit --sample 10"
     );
-    console.error(
-      "This repo ships fits/build-26.fit for local testing; pass that path if you want to use it."
-    );
     process.exit(1);
   }
   const sampleN = parseSampleArg(argv);
