@@ -16,9 +16,9 @@ export async function runParseFfpCli(argv: string[]): Promise<void> {
   if (fitPath == null) {
     console.error("Error: no .fit file path provided.");
     console.error("");
-    console.error("Usage: dotfit parse-ffp <file.fit> [--sample N]");
+    console.error("Usage: normalize-fit-file parse-ffp <file.fit> [--sample N]");
     console.error(
-      "Example: dotfit parse-ffp path/to/activity.fit --sample 10"
+      "Example: normalize-fit-file parse-ffp path/to/activity.fit --sample 10"
     );
     console.error(
       "This repo ships fits/build-26.fit for local testing; pass that path if you want to use it."
