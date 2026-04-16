@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { bufferToArrayBuffer } from "../buffer";
 import {
   downsampleRecords,
   parseSampleArg,
@@ -9,13 +10,6 @@ import { parseFitPath } from "./fit-path";
 
 const OUT_RAW = "output/fit-file-parser-raw.json";
 const OUT_NORM = "output/fit-file-parser-normalized.json";
-
-function bufferToArrayBuffer(buf: Buffer): ArrayBuffer {
-  return buf.buffer.slice(
-    buf.byteOffset,
-    buf.byteOffset + buf.byteLength
-  ) as ArrayBuffer;
-}
 
 export async function runParseFfpCli(argv: string[]): Promise<void> {
   const fitPath = parseFitPath(argv);
