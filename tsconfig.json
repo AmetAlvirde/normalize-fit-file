@@ -9,7 +9,8 @@
     "noEmit": true,
     "outDir": "dist",
     "rootDir": ".",
-    "types": ["bun"]
+    "declaration": true,
+    "types": ["node", "bun"]
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts"]
 }

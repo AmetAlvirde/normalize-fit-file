@@ -1,21 +1,59 @@
 {
-  "name": "dotfit",
-  "version": "0.1.0",
+  "name": "normalize-fit-file",
   "private": true,
+  "version": "0.1.5",
   "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "bin": {
+    "normalize-fit-file": "./dist/normalize-fit-file.cjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
-    "parse:garmin": "bun run src/parse-garmin.ts",
-    "parse:ffp": "bun run src/parse-ffp.ts",
-    "compare": "bun run src/compare.ts",
+    "build": "tsup",
+    "prepublishOnly": "npm run build",
+    "parse:garmin": "bun run src/cli/normalize-fit-file.ts parse-garmin",
+    "parse:ffp": "bun run src/cli/normalize-fit-file.ts parse-ffp",
+    "compare": "bun run src/cli/normalize-fit-file.ts compare",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {
+  "peerDependencies": {
     "@garmin/fitsdk": "^21.158.0",
     "fit-file-parser": "^2.3.3"
   },
+  "peerDependenciesMeta": {
+    "@garmin/fitsdk": {
+      "optional": true
+    },
+    "fit-file-parser": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@garmin/fitsdk": "^21.158.0",
     "@types/bun": "latest",
+    "@types/node": "^25.6.0",
+    "fit-file-parser": "^2.3.3",
+    "tsup": "^8.5.1",
     "typescript": "^5.7.0"
   }
 }

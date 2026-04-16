@@ -1,12 +1,15 @@
-# DotFit — developer onboarding
+# normalize-fit-file — developer onboarding
 
-DotFit turns **Garmin FIT** (`.fit`) binaries into **JSON**: a raw parse plus
-a **normalized** shape with Garmin-style field names, optional Stryd label
-normalization, and shared metadata/session/lap/record sections.
+**normalize-fit-file** turns **Garmin FIT** (`.fit`) binaries into **JSON**: a raw parse plus
+a **normalized** shape with Garmin-style field names, **Stryd/vendor display
+labels mapped to camelCase** (fit-file-parser path), and shared
+metadata/session/lap/record sections.
 
 ## Prerequisites
 
-- **[Bun](https://bun.sh)** (the CLI scripts use `bun run`).
+- **Node.js 18+** for the published **`normalize-fit-file`** CLI and library.
+- **[Bun](https://bun.sh)** (optional): this repo’s npm scripts use `bun run`
+  to execute [`src/cli/normalize-fit-file.ts`](../src/cli/normalize-fit-file.ts) without compiling first.
 
 From the repo root:
 
@@ -14,16 +17,42 @@ From the repo root:
 bun install
 ```
 
+## CLI (`normalize-fit-file` command)
+
+Consumers install **`normalize-fit-file`** and peer parser(s), then:
+
+```bash
+npx normalize-fit-file parse-ffp path/to/your/activity.fit
+npx normalize-fit-file parse-garmin path/to/your/activity.fit
+npx normalize-fit-file compare
+```
+
+- **`parse-ffp`** needs **`fit-file-parser`** installed.
+- **`parse-garmin`** needs **`@garmin/fitsdk`**.
+- **`compare`** expects prior outputs under `output/` from both parsers.
+
+`npx normalize-fit-file help` prints usage. **Bun:** `bunx normalize-fit-file …` runs the same binary.
+
 ## Parse your own FIT file (recommended path)
 
 The default pipeline uses **fit-file-parser** plus normalization
-(`normalizeFFP` in [`src/parse-ffp.ts`](../src/parse-ffp.ts)):
+(`normalizeFFP` in [`src/parse-ffp.ts`](../src/parse-ffp.ts); also exported from the package root as a named export after `pnpm build`—see [`src/index.ts`](../src/index.ts)):
+
+**Published package:**
+
+```bash
+npx normalize-fit-file parse-ffp path/to/your/activity.fit
+```
+
+**This repository:**
 
 ```bash
 bun run parse:ffp -- path/to/your/activity.fit
 ```
 
-If you omit the path, the default sample file `fits/build-26.fit` is used.
+You must pass a path to a `.fit` file; running the command with no file exits
+with an error. Do not commit personal `.fit` files; use `.gitignore` (e.g. `sample-fits/`, `fits/*.fit`).
+The published npm package only ships **`dist/`**—consumers always pass their own `.fit` path.
 
 **Outputs** (written under `output/`):
 
@@ -35,6 +64,7 @@ If you omit the path, the default sample file `fits/build-26.fit` is used.
 **Large files:** downsample record rows for smaller JSON while debugging:
 
 ```bash
+npx normalize-fit-file parse-ffp path/to/activity.fit --sample 10
 bun run parse:ffp -- path/to/activity.fit --sample 10
 ```
 
@@ -45,14 +75,18 @@ That keeps every 10th record (see `parseSampleArg` in [`src/normalize.ts`](../sr
 For a second opinion or diffing against the official decoder:
 
 ```bash
+npx normalize-fit-file parse-garmin path/to/your/activity.fit
 bun run parse:garmin -- path/to/your/activity.fit
 ```
+
+A `.fit` path is required (same as `parse:ffp`).
 
 Outputs: `output/garmin-sdk-raw.json` and `output/garmin-sdk-normalized.json`.
 
 After generating both normalized files, you can run:
 
 ```bash
+npx normalize-fit-file compare
 bun run compare
 ```
 
@@ -60,15 +94,25 @@ This writes `output/comparison-report.json` (field coverage and value checks
 between the two parsers). See [followup-key-aliasing.md](followup-key-aliasing.md)
 for how naming relates to comparisons.
 
-## Use as a library (TypeScript)
+## Use as a library (TypeScript / Node.js or Bun)
 
-1. Copy or depend on this package and import **`normalizeFFP`**
-   from [`src/parse-ffp.ts`](../src/parse-ffp.ts) (or expose it via your own entry point).
-2. Read the `.fit` file into an `ArrayBuffer`, call
-   `FitParser`’s `parseAsync` (same options as in `parseFitBuffer`), then pass
-   the result to **`normalizeFFP(raw)`**.
-3. Types: **`NormalizedFitData`** and related types live
-   in [`src/normalize.ts`](../src/normalize.ts).
+1. Install **`normalize-fit-file`** and the parser(s) you need as peer dependencies, e.g.
+   `pnpm add normalize-fit-file fit-file-parser` (and/or `@garmin/fitsdk` for `normalizeGarmin`).
+2. Import from the package entry point:
+
+   ```ts
+   import {
+     normalizeFFP,
+     parseFitBuffer,
+     type NormalizedFitData,
+   } from "normalize-fit-file";
+   ```
+
+3. Read the `.fit` file into an `ArrayBuffer`, parse with **`parseFitBuffer`** (or
+   `FitParser`’s `parseAsync` with the same options), then pass the result to
+   **`normalizeFFP(raw)`**.
+4. Types such as **`NormalizedFitData`** are exported from **`normalize-fit-file`** (see
+   [`src/index.ts`](../src/index.ts)).
 
 Field naming pipeline:
 
@@ -79,13 +123,17 @@ Field naming pipeline:
 
 ## Scripts (summary)
 
-| Command                | Purpose                                                                 |
-| ---------------------- | ----------------------------------------------------------------------- |
-| `bun run parse:ffp`    | Parse FIT → raw + normalized JSON (recommended).                        |
-| `bun run parse:garmin` | Parse FIT with `@garmin/fitsdk` → raw + normalized JSON.                |
-| `bun run compare`      | Compare the two normalized outputs (expects existing `output/*` files). |
-| `bun test`             | Unit tests.                                                             |
-| `bun run typecheck`    | `tsc --noEmit`.                                                         |
+| Command                              | Purpose                                            |
+| ------------------------------------ | -------------------------------------------------- |
+| `npx normalize-fit-file parse-ffp <file.fit>`    | Published CLI; **path required**.                  |
+| `npx normalize-fit-file parse-garmin <file.fit>` | Published CLI; **path required**.                  |
+| `npx normalize-fit-file compare`                 | Published CLI; expects `output/*` normalized JSON. |
+| `bun run parse:ffp -- <file.fit>`    | Repo dev (Bun + `normalize-fit-file.ts`).                      |
+| `bun run parse:garmin -- <file.fit>` | Repo dev.                                          |
+| `bun run compare`                    | Repo dev.                                          |
+| `bun test`                           | Unit tests. Optional smoke: `FIT_SMOKE_FIXTURE` → local `.fit`. |
+| `pnpm run typecheck`                 | `tsc --noEmit`.                                    |
+| `pnpm run build`                     | `dist/` library + `normalize-fit-file.cjs` CLI.                |
 
 ## Further reading
 

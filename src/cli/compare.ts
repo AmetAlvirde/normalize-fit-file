@@ -3,7 +3,7 @@ import {
   type NormalizedFitData,
   type RecordData,
   writeOutput,
-} from "./normalize";
+} from "../normalize";
 
 const GARMIN_NORM = "output/garmin-sdk-normalized.json";
 const FFP_NORM = "output/fit-file-parser-normalized.json";
@@ -201,7 +201,7 @@ function compareRecordArrays(
   return { comparedPairs: compared, valueMismatches };
 }
 
-async function main() {
+export async function runCompareCli(_argv: string[]): Promise<void> {
   const garmin = await loadNormalized(GARMIN_NORM);
   const ffp = await loadNormalized(FFP_NORM);
 
@@ -487,10 +487,3 @@ function fieldPresenceRates(
   }
   return out;
 }
-
-// Extend Set prototype for union - actually I used metaG.union which doesn't exist on Set in JS
-
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
