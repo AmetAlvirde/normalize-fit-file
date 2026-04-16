@@ -3,12 +3,12 @@ import { runParseFfpCli } from "./parse-ffp";
 import { runParseGarminCli } from "./parse-garmin";
 
 function printHelp(): void {
-  console.log(`dotfit — FIT parse and compare utilities
+  console.log(`normalize-fit-file — FIT parse and compare utilities
 
 Usage:
-  dotfit parse-ffp <file.fit> [--sample N]
-  dotfit parse-garmin <file.fit> [--sample N]
-  dotfit compare
+  normalize-fit-file parse-ffp <file.fit> [--sample N]
+  normalize-fit-file parse-garmin <file.fit> [--sample N]
+  normalize-fit-file compare
 
 Install peer dependencies as needed: fit-file-parser (parse-ffp), @garmin/fitsdk (parse-garmin).
 `);

@@ -14,7 +14,7 @@ export default defineConfig([
     external: peerExternal,
   },
   {
-    entry: { dotfit: "src/cli/dotfit.ts" },
+    entry: { "normalize-fit-file": "src/cli/normalize-fit-file.ts" },
     format: ["cjs"],
     dts: false,
     outDir: "dist",
