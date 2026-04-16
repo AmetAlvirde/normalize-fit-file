@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@garmin/fitsdk':
-        specifier: ^21.158.0
-        version: 21.200.0
       fit-file-parser:
         specifier: ^2.3.3
         version: 2.3.3
@@ -27,6 +24,10 @@ importers:
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
+    optionalDependencies:
+      '@garmin/fitsdk':
+        specifier: ^21.158.0
+        version: 21.200.0
 
 packages:
 
@@ -634,7 +635,8 @@ snapshots:
   '@esbuild/win32-x64@0.27.7':
     optional: true
 
-  '@garmin/fitsdk@21.200.0': {}
+  '@garmin/fitsdk@21.200.0':
+    optional: true
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:

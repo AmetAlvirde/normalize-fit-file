@@ -10,7 +10,7 @@ Usage:
   normalize-fit-file parse-garmin <file.fit> [--sample N]
   normalize-fit-file compare
 
-Install peer dependencies as needed: fit-file-parser (parse-ffp), @garmin/fitsdk (parse-garmin).
+The package bundles fit-file-parser for parse-ffp. parse-garmin uses @garmin/fitsdk (optional dependency; add it if not installed).
 `);
 }
 

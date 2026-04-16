@@ -1,7 +1,26 @@
 {
   "name": "normalize-fit-file",
-  "private": true,
-  "version": "0.1.5",
+  "description": "Turn Fit files from Garmin, Stryd, and other vendors into normalized JSON or js objects",
+  "author": "Amet Alvirde <ametalvirde@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AmetAlvirde/normalize-fit-file.git"
+  },
+  "homepage": "https://github.com/AmetAlvirde/normalize-fit-file",
+  "bugs": {
+    "url": "https://github.com/AmetAlvirde/normalize-fit-file/issues"
+  },
+  "keywords": [
+    "fit",
+    "fit files",
+    "garmin",
+    "stryd",
+    "normalize",
+    "json",
+    "normalize-fit-file"
+  ],
+  "version": "1.0.0",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -36,23 +55,15 @@
     "test": "bun test",
     "typecheck": "tsc --noEmit"
   },
-  "peerDependencies": {
-    "@garmin/fitsdk": "^21.158.0",
+  "dependencies": {
     "fit-file-parser": "^2.3.3"
   },
-  "peerDependenciesMeta": {
-    "@garmin/fitsdk": {
-      "optional": true
-    },
-    "fit-file-parser": {
-      "optional": true
-    }
+  "optionalDependencies": {
+    "@garmin/fitsdk": "^21.158.0"
   },
   "devDependencies": {
-    "@garmin/fitsdk": "^21.158.0",
     "@types/bun": "latest",
     "@types/node": "^25.6.0",
-    "fit-file-parser": "^2.3.3",
     "tsup": "^8.5.1",
     "typescript": "^5.7.0"
   }
