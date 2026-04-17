@@ -79,17 +79,6 @@ export type NormalizedFitData = {
 
 export type NormalizeMapper = (rawData: unknown) => NormalizedFitData;
 
-/** Parse `--sample N` from argv. Returns undefined if absent or invalid. */
-export function parseSampleArg(argv: string[]): number | undefined {
-  const idx = argv.indexOf("--sample");
-  if (idx === -1) return undefined;
-  const n = Number(argv[idx + 1]);
-  if (!Number.isFinite(n) || n < 1) {
-    throw new Error(`Invalid --sample value: ${argv[idx + 1] ?? "(missing)"}`);
-  }
-  return Math.floor(n);
-}
-
 /** Keep every Nth record (1-based: first is kept, then every Nth). */
 export function downsampleRecords(
   records: RecordData[],

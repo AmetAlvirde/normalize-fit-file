@@ -1,24 +1,6 @@
 import { existsSync, statSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 
-/**
- * First positional CLI argument that is not `--sample` or its numeric value.
- * @deprecated Prefer {@link parseCliArgs} once parse commands are migrated.
- */
-export function parseFitPath(argv: string[]): string | undefined {
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i]!;
-    if (a === "--sample") {
-      i += 1;
-      continue;
-    }
-    if (!a.startsWith("-")) {
-      return a;
-    }
-  }
-  return undefined;
-}
-
 export type CliArgs = {
   fitPath: string;
   format: "json" | "yaml";

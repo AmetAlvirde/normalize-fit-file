@@ -6,9 +6,16 @@ function printHelp(): void {
   console.log(`normalize-fit-file — FIT parse and compare utilities
 
 Usage:
-  normalize-fit-file parse-ffp <file.fit> [--sample N]
-  normalize-fit-file parse-garmin <file.fit> [--sample N]
+  normalize-fit-file parse-ffp <file.fit> [options]
+  normalize-fit-file parse-garmin <file.fit> [options]
   normalize-fit-file compare
+
+Options:
+  -f, --format <json|yaml>   Output format (default: json)
+  -o, --output <path>        Output file or directory (default: ./<input-name>.<format>)
+  -r, --raw                  Also write raw parser output
+  -s, --sample <N>           Keep every Nth record
+  -h, --help                 Show this help
 
 The package bundles fit-file-parser for parse-ffp. parse-garmin uses @garmin/fitsdk (optional dependency; add it if not installed).
 `);

@@ -79,7 +79,7 @@ npx normalize-fit-file parse-ffp path/to/activity.fit --sample 10
 bun run parse:ffp -- path/to/activity.fit --sample 10
 ```
 
-That keeps every 10th record (see `parseSampleArg` in [`src/normalize.ts`](src/normalize.ts)).
+That keeps every 10th record (see `--sample` / `-s` in [`src/cli/fit-path.ts`](src/cli/fit-path.ts) via `parseCliArgs`).
 
 ## Optional: Garmin SDK parse (reference / comparison)
 
