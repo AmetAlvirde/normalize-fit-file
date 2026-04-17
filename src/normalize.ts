@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import yaml from "js-yaml";
 
 /** Workout / file-level metadata (sport, timestamps, naming). */
 export type WorkoutMetadata = {
@@ -78,17 +79,6 @@ export type NormalizedFitData = {
 
 export type NormalizeMapper = (rawData: unknown) => NormalizedFitData;
 
-/** Parse `--sample N` from argv. Returns undefined if absent or invalid. */
-export function parseSampleArg(argv: string[]): number | undefined {
-  const idx = argv.indexOf("--sample");
-  if (idx === -1) return undefined;
-  const n = Number(argv[idx + 1]);
-  if (!Number.isFinite(n) || n < 1) {
-    throw new Error(`Invalid --sample value: ${argv[idx + 1] ?? "(missing)"}`);
-  }
-  return Math.floor(n);
-}
-
 /** Keep every Nth record (1-based: first is kept, then every Nth). */
 export function downsampleRecords(
   records: RecordData[],
@@ -98,18 +88,34 @@ export function downsampleRecords(
   return records.filter((_, i) => i % sampleEveryN === 0);
 }
 
-const jsonReplacer = (_key: string, value: unknown) => {
-  if (typeof value === "bigint") return value.toString();
-  if (value instanceof Date) return value.toISOString();
-  return value;
-};
+/** Recursively prepare values for JSON/YAML (bigint → number, Date → ISO string). */
+export function sanitizeForSerialization(data: unknown): unknown {
+  if (data === null || data === undefined) return data;
+  if (typeof data === "bigint") return Number(data);
+  if (data instanceof Date) return data.toISOString();
+  if (typeof data !== "object") return data;
+  if (Array.isArray(data)) {
+    return data.map(sanitizeForSerialization);
+  }
+  const obj = data as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const key of Object.keys(obj)) {
+    out[key] = sanitizeForSerialization(obj[key]);
+  }
+  return out;
+}
 
 export async function writeOutput(
   filePath: string,
-  data: unknown
+  data: unknown,
+  format: "json" | "yaml" = "json"
 ): Promise<void> {
   await mkdir(dirname(filePath), { recursive: true });
-  const text = JSON.stringify(data, jsonReplacer, 2);
+  const sanitized = sanitizeForSerialization(data);
+  const text =
+    format === "json"
+      ? JSON.stringify(sanitized, null, 2)
+      : yaml.dump(sanitized);
   await writeFile(filePath, text, "utf-8");
 }
 

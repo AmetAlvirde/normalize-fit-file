@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import yaml from "js-yaml";
 import { bufferToArrayBuffer } from "./buffer";
+import { sanitizeForSerialization, writeOutput } from "./normalize";
 import { normalizeFFP, parseFitBuffer } from "./parse-ffp";
 
 /** Set to a local `.fit` path to run this test (keep under gitignored dirs such as `sample-fits/`). */
@@ -31,6 +35,26 @@ describe("parseFitBuffer + normalizeFFP (smoke)", () => {
       expect(norm.metadata).toBeTruthy();
       expect((norm.metadata as { timestamp?: unknown }).timestamp).not.toBeNull();
       expect((norm.metadata as { timestamp?: unknown }).timestamp).not.toBeUndefined();
+    }
+  );
+
+  test.skipIf(!hasSmokeFixture)(
+    "writes normalized fixture as YAML and parses back to the same structure",
+    async () => {
+      const nodeBuf = await readFile(fixturePath);
+      const raw = await parseFitBuffer(bufferToArrayBuffer(nodeBuf));
+      const norm = normalizeFFP(raw);
+
+      const dir = await mkdtemp(join(tmpdir(), "fit-yaml-smoke-"));
+      const yamlPath = join(dir, "normalized.yaml");
+      try {
+        await writeOutput(yamlPath, norm, "yaml");
+        const text = await readFile(yamlPath, "utf-8");
+        const parsed = yaml.load(text);
+        expect(parsed).toEqual(sanitizeForSerialization(norm));
+      } finally {
+        await rm(dir, { recursive: true, force: true });
+      }
     }
   );
 });
