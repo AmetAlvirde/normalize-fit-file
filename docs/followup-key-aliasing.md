@@ -19,6 +19,15 @@ Together, normalized FFP output should align with
 [`normalizeGarmin`](../src/parse-garmin.ts) wherever both parsers expose the
 same conceptual field (allowing for remaining semantic/value differences).
 
+## Compare CLI: basename-derived keys (current behavior)
+
+The [`compare`](../src/cli/compare.ts) command takes **two normalized file paths**.
+The report does **not** use fixed keys like `garmin` / `ffp`. Instead, each input’s
+**basename without extension** becomes a **label** (see the module comment in
+`compare.ts`). Field coverage uses keys such as `<labelA>Only` / `<labelB>Only`,
+and scalar mismatch rows repeat those labels as dynamic property names for the two
+values being compared.
+
 ## Optional: compare-time aliasing
 
 You can still teach [`compare.ts`](../src/cli/compare.ts) to normalize keys before

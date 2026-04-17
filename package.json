@@ -1,6 +1,6 @@
 {
   "name": "normalize-fit-file",
-  "description": "Turn Fit files from Garmin, Stryd, and other vendors into normalized JSON, YAML, or plain objects",
+  "description": "Turn Fit files from Garmin, Stryd, and other vendors into normalized JSON, YAML, or plain objects and compare them systematically",
   "author": "Amet Alvirde <ametalvirde@gmail.com>",
   "license": "MIT",
   "repository": {
@@ -19,9 +19,10 @@
     "normalize",
     "json",
     "yaml",
+    "cli",
     "normalize-fit-file"
   ],
-  "version": "1.1.0",
+  "version": "1.2.0",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
