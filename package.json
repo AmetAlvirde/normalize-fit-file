@@ -56,13 +56,15 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "fit-file-parser": "^2.3.3"
+    "fit-file-parser": "^2.3.3",
+    "js-yaml": "^4.1.1"
   },
   "optionalDependencies": {
     "@garmin/fitsdk": "^21.158.0"
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^25.6.0",
     "tsup": "^8.5.1",
     "typescript": "^5.7.0"
