@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import yaml from "js-yaml";
 
@@ -117,6 +117,16 @@ export async function writeOutput(
       ? JSON.stringify(sanitized, null, 2)
       : yaml.dump(sanitized);
   await writeFile(filePath, text, "utf-8");
+}
+
+/** Load normalized FIT data from JSON or YAML (extension-based). */
+export async function loadNormalized(path: string): Promise<NormalizedFitData> {
+  const text = await readFile(path, "utf-8");
+  const lower = path.toLowerCase();
+  if (lower.endsWith(".yaml") || lower.endsWith(".yml")) {
+    return yaml.load(text) as NormalizedFitData;
+  }
+  return JSON.parse(text) as NormalizedFitData;
 }
 
 /** Shallow clone object fields into a hybrid map (drops non-enumerable). */
