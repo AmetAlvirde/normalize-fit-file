@@ -9,6 +9,20 @@ export type CliArgs = {
   sample: number | undefined;
 };
 
+export type CompareArgs = {
+  fileA: string;
+  fileB: string;
+  labelA: string;
+  labelB: string;
+  format: "json" | "yaml";
+  output: string;
+};
+
+function labelFromPath(filePath: string): string {
+  const base = basename(filePath);
+  return base.replace(/\.[^.]+$/, "") || base;
+}
+
 function parseFormatValue(value: string): "json" | "yaml" {
   const v = value.toLowerCase();
   if (v === "json") return "json";
@@ -159,4 +173,89 @@ export function parseCliArgs(argv: string[]): CliArgs {
   }
 
   return { fitPath, format, output, raw, sample };
+}
+
+/**
+ * Parses compare subcommand argv (two normalized files, optional -f/-o).
+ */
+export function parseCompareArgs(argv: string[]): CompareArgs {
+  let formatExplicit: "json" | "yaml" | undefined;
+  let outputOpt: string | undefined;
+  const positionals: string[] = [];
+
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i]!;
+
+    if (a === "-f" || a === "--format" || a.startsWith("-f=") || a.startsWith("--format=")) {
+      const label = a.startsWith("--") ? "--format" : "-f";
+      const { value, endIndex } = readOptionValue(argv, i, label);
+      formatExplicit = parseFormatValue(value);
+      i = endIndex;
+      continue;
+    }
+
+    if (a === "-o" || a === "--output" || a.startsWith("-o=") || a.startsWith("--output=")) {
+      const label = a.startsWith("--") ? "--output" : "-o";
+      const { value, endIndex } = readOptionValue(argv, i, label);
+      outputOpt = value;
+      i = endIndex;
+      continue;
+    }
+
+    if (a === "-r" || a === "--raw") {
+      throw new Error(`Unknown option: ${a}`);
+    }
+
+    if (a === "-s" || a === "--sample" || a.startsWith("-s=") || a.startsWith("--sample=")) {
+      throw new Error(`Unknown option: ${a.startsWith("--sample") ? "--sample" : "-s"}`);
+    }
+
+    if (a.startsWith("-")) {
+      throw new Error(`Unknown option: ${a}`);
+    }
+
+    positionals.push(a);
+  }
+
+  if (positionals.length < 2) {
+    throw new Error("Missing normalized file paths (need two positional arguments)");
+  }
+  if (positionals.length > 2) {
+    throw new Error(`Unexpected extra arguments: ${positionals.slice(2).join(" ")}`);
+  }
+
+  const fileA = positionals[0]!;
+  const fileB = positionals[1]!;
+  const labelA = labelFromPath(fileA);
+  const labelB = labelFromPath(fileB);
+
+  const inferredFromOutput =
+    outputOpt != null && !isOutputDirectory(outputOpt)
+      ? inferFormatFromOutputPath(outputOpt)
+      : undefined;
+
+  if (
+    formatExplicit != null &&
+    inferredFromOutput != null &&
+    formatExplicit !== inferredFromOutput
+  ) {
+    throw new Error(
+      `--format ${formatExplicit} conflicts with output file extension (inferred ${inferredFromOutput})`
+    );
+  }
+
+  const format = formatExplicit ?? inferredFromOutput ?? "json";
+
+  let output: string;
+  const defaultBase = "comparison-report";
+  if (outputOpt == null) {
+    output = resolve(process.cwd(), `${defaultBase}.${format}`);
+  } else if (isOutputDirectory(outputOpt)) {
+    const dir = outputOpt.replace(/[/\\]+$/, "") || ".";
+    output = resolve(process.cwd(), join(dir, `${defaultBase}.${format}`));
+  } else {
+    output = resolve(process.cwd(), outputOpt);
+  }
+
+  return { fileA, fileB, labelA, labelB, format, output };
 }

@@ -1,23 +1,23 @@
-import { readFile } from "node:fs/promises";
 import {
   type NormalizedFitData,
   type RecordData,
+  loadNormalized,
   writeOutput,
 } from "../normalize";
-
-const GARMIN_NORM = "output/garmin-sdk-normalized.json";
-const FFP_NORM = "output/fit-file-parser-normalized.json";
-const REPORT_OUT = "output/comparison-report.json";
+import { parseCompareArgs } from "./fit-path";
 
 const FLOAT_TOL = 0.001;
 
-/** Optional follow-up: reduce camelCase vs snake_case noise — see docs/followup-key-aliasing.md */
+/**
+ * Comparison report JSON uses keys derived from each input filename (basename without
+ * extension). For example, `race-garmin.json` → label `race-garmin`, so field coverage
+ * includes `race-garminOnly` / `race-ffpOnly`, and scalar mismatches look like
+ * `{ key, race-garmin: …, race-ffp: …, reason }` instead of fixed `garmin` / `ffp` keys.
+ *
+ * Optional follow-up: reduce camelCase vs snake_case noise — see docs/followup-key-aliasing.md
+ */
 
 type Category = "metadata" | "deviceInfo" | "session" | "laps" | "records";
-
-function loadNormalized(path: string): Promise<NormalizedFitData> {
-  return readFile(path, "utf-8").then((t) => JSON.parse(t) as NormalizedFitData);
-}
 
 function collectKeys(obj: Record<string, unknown> | undefined): Set<string> {
   if (!obj) return new Set();
@@ -122,30 +122,30 @@ function analyzeTimestampGaps(records: RecordData[]): {
 }
 
 function compareCategoryScalars(
-  g: Record<string, unknown>,
-  f: Record<string, unknown>
+  rowA: Record<string, unknown>,
+  rowB: Record<string, unknown>
 ): {
   sharedKeys: string[];
-  mismatches: { key: string; garmin: unknown; ffp: unknown; reason: string }[];
+  mismatches: { key: string; a: unknown; b: unknown; reason: string }[];
 } {
-  const gk = collectKeys(g);
-  const fk = collectKeys(f);
-  const shared = [...gk].filter((k) => fk.has(k)).sort();
+  const keysA = collectKeys(rowA);
+  const keysB = collectKeys(rowB);
+  const shared = [...keysA].filter((k) => keysB.has(k)).sort();
   const mismatches: {
     key: string;
-    garmin: unknown;
-    ffp: unknown;
+    a: unknown;
+    b: unknown;
     reason: string;
   }[] = [];
   for (const key of shared) {
-    const a = g[key];
-    const b = f[key];
-    if (!valuesAgree(a, b)) {
+    const va = rowA[key];
+    const vb = rowB[key];
+    if (!valuesAgree(va, vb)) {
       mismatches.push({
         key,
-        garmin: a,
-        ffp: b,
-        reason: valueMismatchKind(a, b),
+        a: va,
+        b: vb,
+        reason: valueMismatchKind(va, vb),
       });
     }
   }
@@ -153,45 +153,45 @@ function compareCategoryScalars(
 }
 
 function compareRecordArrays(
-  gRec: RecordData[],
-  fRec: RecordData[],
+  recA: RecordData[],
+  recB: RecordData[],
   maxReport = 50
 ): {
   comparedPairs: number;
   valueMismatches: {
     index: number;
     field: string;
-    garmin: unknown;
-    ffp: unknown;
+    a: unknown;
+    b: unknown;
     reason: string;
   }[];
 } {
   const valueMismatches: {
     index: number;
     field: string;
-    garmin: unknown;
-    ffp: unknown;
+    a: unknown;
+    b: unknown;
     reason: string;
   }[] = [];
 
-  const n = Math.min(gRec.length, fRec.length);
+  const n = Math.min(recA.length, recB.length);
   let compared = 0;
   for (let i = 0; i < n; i++) {
-    const gr = gRec[i]!;
-    const fr = fRec[i]!;
-    const keys = new Set([...Object.keys(gr), ...Object.keys(fr)]);
+    const rowA = recA[i]!;
+    const rowB = recB[i]!;
+    const keys = new Set([...Object.keys(rowA), ...Object.keys(rowB)]);
     for (const key of keys) {
-      if (!(key in gr) || !(key in fr)) continue;
-      const a = gr[key];
-      const b = fr[key];
-      if (!valuesAgree(a, b)) {
+      if (!(key in rowA) || !(key in rowB)) continue;
+      const va = rowA[key];
+      const vb = rowB[key];
+      if (!valuesAgree(va, vb)) {
         if (valueMismatches.length < maxReport) {
           valueMismatches.push({
             index: i,
             field: key,
-            garmin: a,
-            ffp: b,
-            reason: valueMismatchKind(a, b),
+            a: va,
+            b: vb,
+            reason: valueMismatchKind(va, vb),
           });
         }
       }
@@ -201,226 +201,274 @@ function compareRecordArrays(
   return { comparedPairs: compared, valueMismatches };
 }
 
-export async function runCompareCli(_argv: string[]): Promise<void> {
-  const garmin = await loadNormalized(GARMIN_NORM);
-  const ffp = await loadNormalized(FFP_NORM);
-
-  const metaG = collectKeys(garmin.metadata);
-  const metaF = collectKeys(ffp.metadata);
-  const sessG = collectKeys(garmin.session);
-  const sessF = collectKeys(ffp.session);
-  const lapG = unionKeysFromArray(garmin.laps);
-  const lapF = unionKeysFromArray(ffp.laps);
-  const recG = unionKeysFromArray(garmin.records);
-  const recF = unionKeysFromArray(ffp.records);
-  const devG = unionKeysFromArray(garmin.deviceInfo);
-  const devF = unionKeysFromArray(ffp.deviceInfo);
-
-  const fieldCoverage: Record<
-    Category,
-    {
-      garminOnly: string[];
-      ffpOnly: string[];
-      both: number;
-    }
-  > = {
-    metadata: {
-      garminOnly: setDiff(metaG, metaF),
-      ffpOnly: setDiff(metaF, metaG),
-      both: [...metaG].filter((k) => metaF.has(k)).length,
-    },
-    session: {
-      garminOnly: setDiff(sessG, sessF),
-      ffpOnly: setDiff(sessF, sessG),
-      both: [...sessG].filter((k) => sessF.has(k)).length,
-    },
-    laps: {
-      garminOnly: setDiff(lapG, lapF),
-      ffpOnly: setDiff(lapF, lapG),
-      both: [...lapG].filter((k) => lapF.has(k)).length,
-    },
-    records: {
-      garminOnly: setDiff(recG, recF),
-      ffpOnly: setDiff(recF, recG),
-      both: [...recG].filter((k) => recF.has(k)).length,
-    },
-    deviceInfo: {
-      garminOnly: setDiff(devG, devF),
-      ffpOnly: setDiff(devF, devG),
-      both: [...devG].filter((k) => devF.has(k)).length,
-    },
+function fieldCoverageRow(
+  labelA: string,
+  labelB: string,
+  setA: Set<string>,
+  setB: Set<string>
+): Record<string, unknown> {
+  const onlyA = `${labelA}Only`;
+  const onlyB = `${labelB}Only`;
+  return {
+    [onlyA]: setDiff(setA, setB),
+    [onlyB]: setDiff(setB, setA),
+    both: [...setA].filter((k) => setB.has(k)).length,
   };
+}
 
-  const metaCmp = compareCategoryScalars(garmin.metadata, ffp.metadata);
-  const sessCmp = compareCategoryScalars(garmin.session, ffp.session);
+function mapScalarMismatches(
+  mismatches: { key: string; a: unknown; b: unknown; reason: string }[],
+  labelA: string,
+  labelB: string
+): Record<string, unknown>[] {
+  return mismatches.map((m) => ({
+    key: m.key,
+    [labelA]: m.a,
+    [labelB]: m.b,
+    reason: m.reason,
+  }));
+}
 
-  const recCmp = compareRecordArrays(garmin.records, ffp.records);
-
-  const gapG = analyzeTimestampGaps(garmin.records);
-  const gapF = analyzeTimestampGaps(ffp.records);
-
-  const sharedRecordKeys = [...interSets(recG, recF)].sort();
-  const missingFieldRates = {
-    garmin: fieldPresenceRates(garmin.records, sharedRecordKeys),
-    ffp: fieldPresenceRates(ffp.records, sharedRecordKeys),
-  };
-
-  const typeQuality: {
-    category: Category;
+function mapRecordMismatches(
+  mismatches: {
+    index: number;
     field: string;
-    garminTypes: string[];
-    ffpTypes: string[];
-    note: string;
-  }[] = [];
+    a: unknown;
+    b: unknown;
+    reason: string;
+  }[],
+  labelA: string,
+  labelB: string
+): Record<string, unknown>[] {
+  return mismatches.map((m) => ({
+    index: m.index,
+    field: m.field,
+    [labelA]: m.a,
+    [labelB]: m.b,
+    reason: m.reason,
+  }));
+}
+
+export async function runCompareCli(argv: string[]): Promise<void> {
+  let args;
+  try {
+    args = parseCompareArgs(argv);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(`Error: ${msg}`);
+    console.error("");
+    console.error(
+      "Usage: normalize-fit-file compare <fileA> <fileB> [-f json|yaml] [-o path]"
+    );
+    console.error(
+      "Example: normalize-fit-file compare race-garmin.json race-ffp.yaml -o report.yaml"
+    );
+    process.exit(1);
+  }
+
+  const { labelA, labelB, format, output } = args;
+  const onlyA = `${labelA}Only`;
+  const onlyB = `${labelB}Only`;
+  const typesAKey = `${labelA}Types`;
+  const typesBKey = `${labelB}Types`;
+
+  const dataA = await loadNormalized(args.fileA);
+  const dataB = await loadNormalized(args.fileB);
+
+  const metaA = collectKeys(dataA.metadata);
+  const metaB = collectKeys(dataB.metadata);
+  const sessA = collectKeys(dataA.session);
+  const sessB = collectKeys(dataB.session);
+  const lapA = unionKeysFromArray(dataA.laps);
+  const lapB = unionKeysFromArray(dataB.laps);
+  const recA = unionKeysFromArray(dataA.records);
+  const recB = unionKeysFromArray(dataB.records);
+  const devA = unionKeysFromArray(dataA.deviceInfo);
+  const devB = unionKeysFromArray(dataB.deviceInfo);
+
+  const fieldCoverage: Record<Category, Record<string, unknown>> = {
+    metadata: fieldCoverageRow(labelA, labelB, metaA, metaB),
+    session: fieldCoverageRow(labelA, labelB, sessA, sessB),
+    laps: fieldCoverageRow(labelA, labelB, lapA, lapB),
+    records: fieldCoverageRow(labelA, labelB, recA, recB),
+    deviceInfo: fieldCoverageRow(labelA, labelB, devA, devB),
+  };
+
+  const metaCmp = compareCategoryScalars(dataA.metadata, dataB.metadata);
+  const sessCmp = compareCategoryScalars(dataA.session, dataB.session);
+
+  const recCmp = compareRecordArrays(dataA.records, dataB.records);
+
+  const gapA = analyzeTimestampGaps(dataA.records);
+  const gapB = analyzeTimestampGaps(dataB.records);
+
+  const sharedRecordKeys = [...interSets(recA, recB)].sort();
+  const missingFieldRates: Record<string, Record<string, number>> = {
+    [labelA]: fieldPresenceRates(dataA.records, sharedRecordKeys),
+    [labelB]: fieldPresenceRates(dataB.records, sharedRecordKeys),
+  };
+
+  const typeQuality: Record<string, unknown>[] = [];
 
   const checkTypes = (
     cat: Category,
-    gRows: Record<string, unknown>[],
-    fRows: Record<string, unknown>[],
+    rowsA: Record<string, unknown>[],
+    rowsB: Record<string, unknown>[],
     keys: Set<string>
   ) => {
     for (const field of [...keys].sort()) {
-      const tg = recordFieldTypes(gRows, field);
-      const tf = recordFieldTypes(fRows, field);
-      const gStr = [...tg.types].sort().join("|");
-      const fStr = [...tf.types].sort().join("|");
-      if (gStr !== fStr) {
+      const tA = recordFieldTypes(rowsA, field);
+      const tB = recordFieldTypes(rowsB, field);
+      const strA = [...tA.types].sort().join("|");
+      const strB = [...tB.types].sort().join("|");
+      if (strA !== strB) {
         let note = "types differ";
-        const gNum = tg.types.has("number");
-        const fStrT = tf.types.has("string");
-        const fNum = tf.types.has("number");
-        const gStrT = tg.types.has("string");
-        if ((gNum && fStrT) || (fNum && gStrT)) {
+        const aNum = tA.types.has("number");
+        const bStr = tB.types.has("string");
+        const bNum = tB.types.has("number");
+        const aStr = tA.types.has("string");
+        if ((aNum && bStr) || (bNum && aStr)) {
           note = "numeric_vs_string_enum_like";
         }
         typeQuality.push({
           category: cat,
           field,
-          garminTypes: [...tg.types].sort(),
-          ffpTypes: [...tf.types].sort(),
+          [typesAKey]: [...tA.types].sort(),
+          [typesBKey]: [...tB.types].sort(),
           note,
         });
       }
     }
   };
 
-  checkTypes(
-    "metadata",
-    [garmin.metadata],
-    [ffp.metadata],
-    interSets(metaG, metaF)
-  );
-  checkTypes(
-    "session",
-    [garmin.session],
-    [ffp.session],
-    interSets(sessG, sessF)
-  );
-  checkTypes("laps", garmin.laps, ffp.laps, interSets(lapG, lapF));
-  checkTypes(
-    "records",
-    garmin.records,
-    ffp.records,
-    interSets(recG, recF)
-  );
+  checkTypes("metadata", [dataA.metadata], [dataB.metadata], interSets(metaA, metaB));
+  checkTypes("session", [dataA.session], [dataB.session], interSets(sessA, sessB));
+  checkTypes("laps", dataA.laps, dataB.laps, interSets(lapA, lapB));
+  checkTypes("records", dataA.records, dataB.records, interSets(recA, recB));
   checkTypes(
     "deviceInfo",
-    garmin.deviceInfo,
-    ffp.deviceInfo,
-    interSets(devG, devF)
+    dataA.deviceInfo,
+    dataB.deviceInfo,
+    interSets(devA, devB)
   );
 
   const report = {
     generatedAt: new Date().toISOString(),
-    sources: { garmin: GARMIN_NORM, ffp: FFP_NORM },
+    sources: { [labelA]: args.fileA, [labelB]: args.fileB },
     floatTolerance: FLOAT_TOL,
     fieldCoverage,
     valueAgreement: {
       metadata: {
         sharedKeys: metaCmp.sharedKeys.length,
-        mismatches: metaCmp.mismatches,
+        mismatches: mapScalarMismatches(metaCmp.mismatches, labelA, labelB),
       },
       session: {
         sharedKeys: sessCmp.sharedKeys.length,
-        mismatches: sessCmp.mismatches,
+        mismatches: mapScalarMismatches(sessCmp.mismatches, labelA, labelB),
       },
       records: {
         comparedIndexPairs: recCmp.comparedPairs,
-        sampleMismatches: recCmp.valueMismatches,
+        sampleMismatches: mapRecordMismatches(recCmp.valueMismatches, labelA, labelB),
       },
     },
     recordCompleteness: {
-      garmin: {
-        count: garmin.records.length,
-        timestampCount: gapG.sortedTimes.length,
-        maxGapSeconds: gapG.maxGapSeconds,
-        medianGapSeconds: median(gapG.gapsSeconds),
+      [labelA]: {
+        count: dataA.records.length,
+        timestampCount: gapA.sortedTimes.length,
+        maxGapSeconds: gapA.maxGapSeconds,
+        medianGapSeconds: median(gapA.gapsSeconds),
       },
-      ffp: {
-        count: ffp.records.length,
-        timestampCount: gapF.sortedTimes.length,
-        maxGapSeconds: gapF.maxGapSeconds,
-        medianGapSeconds: median(gapF.gapsSeconds),
+      [labelB]: {
+        count: dataB.records.length,
+        timestampCount: gapB.sortedTimes.length,
+        maxGapSeconds: gapB.maxGapSeconds,
+        medianGapSeconds: median(gapB.gapsSeconds),
       },
-      countDelta: garmin.records.length - ffp.records.length,
+      countDelta: dataA.records.length - dataB.records.length,
       sharedRecordKeys,
       missingFieldRates,
     },
     dataTypeQuality: typeQuality,
     summary: {
-      garminMetadataFields: metaG.size,
-      ffpMetadataFields: metaF.size,
-      garminRecordFields: recG.size,
-      ffpRecordFields: recF.size,
+      [`${labelA}MetadataFields`]: metaA.size,
+      [`${labelB}MetadataFields`]: metaB.size,
+      [`${labelA}RecordFields`]: recA.size,
+      [`${labelB}RecordFields`]: recB.size,
       typeMismatchesReported: typeQuality.length,
       sessionScalarMismatches: sessCmp.mismatches.length,
       metadataScalarMismatches: metaCmp.mismatches.length,
     },
   };
 
-  await writeOutput(REPORT_OUT, report);
+  await writeOutput(output, report, format);
+
+  const fcMeta = fieldCoverage.metadata;
+  const fcSess = fieldCoverage.session;
+  const fcRec = fieldCoverage.records;
+  const fcLaps = fieldCoverage.laps;
+  const fcDev = fieldCoverage.deviceInfo;
 
   console.log("Comparison complete\n");
   console.log("Field coverage (unique keys per category)");
   console.log(
     "  metadata — both:",
-    fieldCoverage.metadata.both,
-    "| garmin only:",
-    fieldCoverage.metadata.garminOnly.length,
-    "| ffp only:",
-    fieldCoverage.metadata.ffpOnly.length
+    fcMeta.both,
+    "|",
+    labelA,
+    "only:",
+    (fcMeta[onlyA] as string[]).length,
+    "|",
+    labelB,
+    "only:",
+    (fcMeta[onlyB] as string[]).length
   );
   console.log(
     "  session  — both:",
-    fieldCoverage.session.both,
-    "| garmin only:",
-    fieldCoverage.session.garminOnly.length,
-    "| ffp only:",
-    fieldCoverage.session.ffpOnly.length
+    fcSess.both,
+    "|",
+    labelA,
+    "only:",
+    (fcSess[onlyA] as string[]).length,
+    "|",
+    labelB,
+    "only:",
+    (fcSess[onlyB] as string[]).length
   );
   console.log(
     "  records  — both:",
-    fieldCoverage.records.both,
-    "| garmin only:",
-    fieldCoverage.records.garminOnly.length,
-    "| ffp only:",
-    fieldCoverage.records.ffpOnly.length
+    fcRec.both,
+    "|",
+    labelA,
+    "only:",
+    (fcRec[onlyA] as string[]).length,
+    "|",
+    labelB,
+    "only:",
+    (fcRec[onlyB] as string[]).length
   );
   console.log(
     "  laps     — both:",
-    fieldCoverage.laps.both,
-    "| garmin only:",
-    fieldCoverage.laps.garminOnly.length,
-    "| ffp only:",
-    fieldCoverage.laps.ffpOnly.length
+    fcLaps.both,
+    "|",
+    labelA,
+    "only:",
+    (fcLaps[onlyA] as string[]).length,
+    "|",
+    labelB,
+    "only:",
+    (fcLaps[onlyB] as string[]).length
   );
   console.log(
     "  device   — both:",
-    fieldCoverage.deviceInfo.both,
-    "| garmin only:",
-    fieldCoverage.deviceInfo.garminOnly.length,
-    "| ffp only:",
-    fieldCoverage.deviceInfo.ffpOnly.length
+    fcDev.both,
+    "|",
+    labelA,
+    "only:",
+    (fcDev[onlyA] as string[]).length,
+    "|",
+    labelB,
+    "only:",
+    (fcDev[onlyB] as string[]).length
   );
   console.log("\nValue agreement (scalars)");
   console.log(
@@ -443,18 +491,20 @@ export async function runCompareCli(_argv: string[]): Promise<void> {
   );
   console.log("\nRecord completeness");
   console.log(
-    "  counts — garmin:",
-    garmin.records.length,
-    "ffp:",
-    ffp.records.length,
+    "  counts —",
+    labelA + ":",
+    dataA.records.length,
+    labelB + ":",
+    dataB.records.length,
     "delta:",
     report.recordCompleteness.countDelta
   );
   console.log(
-    "  max timestamp gap (s) — garmin:",
-    gapG.maxGapSeconds.toFixed(3),
-    "ffp:",
-    gapF.maxGapSeconds.toFixed(3)
+    "  max timestamp gap (s) —",
+    labelA + ":",
+    gapA.maxGapSeconds.toFixed(3),
+    labelB + ":",
+    gapB.maxGapSeconds.toFixed(3)
   );
   console.log(
     "  shared record keys (for presence):",
@@ -462,7 +512,7 @@ export async function runCompareCli(_argv: string[]): Promise<void> {
   );
   console.log("\nData type quality (fields with differing types)");
   console.log("  fields reported:", typeQuality.length);
-  console.log("\nReport written to", REPORT_OUT);
+  console.log("\nReport written to", output);
 }
 
 function median(arr: number[]): number {

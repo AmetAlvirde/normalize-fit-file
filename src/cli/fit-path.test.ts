@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { mkdirSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { parseCliArgs, rawOutputPath } from "./fit-path";
+import { parseCliArgs, parseCompareArgs, rawOutputPath } from "./fit-path";
 
 describe("rawOutputPath", () => {
   test("inserts -raw before extension", () => {
@@ -114,5 +114,100 @@ describe("parseCliArgs", () => {
     expect(args.format).toBe("yaml");
     expect(args.raw).toBe(true);
     expect(args.output).toBe(resolve(cwd, "a.yaml"));
+  });
+});
+
+describe("parseCompareArgs", () => {
+  const cwd = process.cwd();
+
+  test("two positionals, labels from basenames sans extension", () => {
+    const args = parseCompareArgs(["./data/race-garmin.json", "out/race-ffp.yaml"]);
+    expect(args.fileA).toBe("./data/race-garmin.json");
+    expect(args.fileB).toBe("out/race-ffp.yaml");
+    expect(args.labelA).toBe("race-garmin");
+    expect(args.labelB).toBe("race-ffp");
+    expect(args.format).toBe("json");
+    expect(args.output).toBe(resolve(cwd, "comparison-report.json"));
+  });
+
+  test("-f yaml and --format yaml with = syntax", () => {
+    expect(parseCompareArgs(["a.json", "b.json", "-f", "yaml"]).format).toBe("yaml");
+    expect(parseCompareArgs(["a.json", "b.json", "--format", "yaml"]).format).toBe("yaml");
+    expect(parseCompareArgs(["a.json", "b.json", "--format=yaml"]).format).toBe("yaml");
+    expect(parseCompareArgs(["a.json", "b.json", "-f=yaml"]).format).toBe("yaml");
+    expect(parseCompareArgs(["a.json", "b.json", "-f", "yaml"]).output).toBe(
+      resolve(cwd, "comparison-report.yaml")
+    );
+  });
+
+  test("-o file and --output with = syntax", () => {
+    const a = parseCompareArgs(["x.json", "y.json", "-o", "out/report.json"]);
+    expect(a.output).toBe(resolve(cwd, "out/report.json"));
+    expect(a.format).toBe("json");
+    const b = parseCompareArgs(["x.json", "y.json", "--output=out/report.yaml"]);
+    expect(b.output).toBe(resolve(cwd, "out/report.yaml"));
+    expect(b.format).toBe("yaml");
+  });
+
+  test("format inferred from -o extension", () => {
+    expect(parseCompareArgs(["a.json", "b.json", "-o", "z.yaml"]).format).toBe("yaml");
+    expect(parseCompareArgs(["a.json", "b.json", "-o", "z.yml"]).format).toBe("yaml");
+  });
+
+  test("explicit --format conflicts with -o extension", () => {
+    expect(() => parseCompareArgs(["a.json", "b.json", "-o", "x.yaml", "-f", "json"])).toThrow(
+      /conflicts with output file extension/
+    );
+    expect(() => parseCompareArgs(["a.json", "b.json", "-f", "yaml", "-o", "x.json"])).toThrow(
+      /conflicts with output file extension/
+    );
+  });
+
+  test("default output uses comparison-report.<format>", () => {
+    expect(parseCompareArgs(["a.json", "b.json"]).output).toBe(
+      resolve(cwd, "comparison-report.json")
+    );
+    expect(parseCompareArgs(["a.json", "b.json", "-f", "yaml"]).output).toBe(
+      resolve(cwd, "comparison-report.yaml")
+    );
+  });
+
+  test("-o directory trailing slash joins comparison-report", () => {
+    const args = parseCompareArgs(["/abs/a.json", "/abs/b.json", "-o", "exports/"]);
+    expect(args.output).toBe(resolve(cwd, "exports", "comparison-report.json"));
+    expect(args.format).toBe("json");
+  });
+
+  test("fewer than two positionals throws", () => {
+    expect(() => parseCompareArgs([])).toThrow(/Missing normalized file paths/);
+    expect(() => parseCompareArgs(["only.json"])).toThrow(/Missing normalized file paths/);
+  });
+
+  test("more than two positionals throws", () => {
+    expect(() => parseCompareArgs(["a.json", "b.json", "c.json"])).toThrow(
+      /Unexpected extra arguments/
+    );
+  });
+
+  test("--raw, --sample, unknown flags throw", () => {
+    expect(() => parseCompareArgs(["a.json", "b.json", "--raw"])).toThrow(/Unknown option: --raw/);
+    expect(() => parseCompareArgs(["a.json", "b.json", "-r"])).toThrow(/Unknown option: -r/);
+    expect(() => parseCompareArgs(["a.json", "b.json", "--sample", "3"])).toThrow(
+      /Unknown option: --sample/
+    );
+    expect(() => parseCompareArgs(["a.json", "b.json", "-s", "3"])).toThrow(/Unknown option: -s/);
+    expect(() => parseCompareArgs(["a.json", "b.json", "--verbose"])).toThrow(/Unknown option/);
+  });
+
+  test("invalid --format throws", () => {
+    expect(() => parseCompareArgs(["a.json", "b.json", "-f", "xml"])).toThrow(/Invalid --format/);
+  });
+
+  test("flags after positionals are allowed", () => {
+    const args = parseCompareArgs(["a.json", "b.json", "-f", "yaml", "-o", "rep.yaml"]);
+    expect(args.fileA).toBe("a.json");
+    expect(args.fileB).toBe("b.json");
+    expect(args.format).toBe("yaml");
+    expect(args.output).toBe(resolve(cwd, "rep.yaml"));
   });
 });
